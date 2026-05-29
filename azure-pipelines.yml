@@ -4,30 +4,60 @@ trigger:
 pool:
   vmImage: ubuntu-latest
 
-steps:
+variables:
+  azureServiceConnection: 'app-hotel-coonection'
+  appName: 'milanhotelapp12345'
 
-- task: NodeTool@0
-  inputs:
-    versionSpec: '18.x'
-  displayName: 'Install Node.js'
+stages:
 
-- script: |
-    npm install
-  displayName: 'Install Dependencies'
+# =========================
+# BUILD STAGE
+# =========================
+- stage: Build
 
-- script: |
-    echo "Build completed successfully"
-  displayName: 'Build Application'
+  jobs:
+  - job: BuildJob
 
-- task: ArchiveFiles@2
-  inputs:
-    rootFolderOrFile: '$(Build.SourcesDirectory)'
-    includeRootFolder: false
-    archiveType: zip
-    archiveFile: '$(Build.ArtifactStagingDirectory)/hotelapp.zip'
-    replaceExistingArchive: true
+    steps:
 
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathToPublish: '$(Build.ArtifactStagingDirectory)'
-    artifactName: 'drop'
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+
+    - script: |
+        npm install
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(Build.SourcesDirectory)'
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: '$(Build.ArtifactStagingDirectory)/hotelapp.zip'
+        replaceExistingArchive: true
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: 'drop'
+
+# =========================
+# DEPLOY STAGE
+# =========================
+- stage: Deploy
+
+  dependsOn: Build
+
+  jobs:
+  - job: DeployWebApp
+
+    steps:
+
+    - download: current
+      artifact: drop
+
+    - task: AzureWebApp@1
+      inputs:
+        azureSubscription: 'app-hotel-coonection'
+        appType: 'webAppLinux'
+        appName: 'milanhotelapp12345'
+        package: '$(Pipeline.Workspace)/drop/hotelapp.zip'

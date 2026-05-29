@@ -2,7 +2,7 @@ trigger:
 - main
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'
 
 variables:
   azureServiceConnection: 'app-hotel-coonection'
@@ -14,42 +14,44 @@ stages:
 # BUILD STAGE
 # =========================
 - stage: Build
-
   jobs:
-  - job: BuildJob
 
+  - job: BuildJob
     steps:
 
-    - task: NodeTool@0
+    - task: UseNode@1
       inputs:
-        versionSpec: '18.x'
+        version: '18.x'
+      displayName: 'Install Node.js'
 
     - script: |
         npm install
+      displayName: 'Install Dependencies'
 
     - task: ArchiveFiles@2
       inputs:
         rootFolderOrFile: '$(Build.SourcesDirectory)'
         includeRootFolder: false
-        archiveType: zip
+        archiveType: 'zip'
         archiveFile: '$(Build.ArtifactStagingDirectory)/hotelapp.zip'
         replaceExistingArchive: true
+      displayName: 'Archive Application'
 
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: 'drop'
+      displayName: 'Publish Artifact'
 
 # =========================
 # DEPLOY STAGE
 # =========================
 - stage: Deploy
-
   dependsOn: Build
 
   jobs:
-  - job: DeployWebApp
 
+  - job: DeployWebApp
     steps:
 
     - download: current
@@ -61,3 +63,4 @@ stages:
         appType: 'webAppLinux'
         appName: 'milanhotelapp12345'
         package: '$(Pipeline.Workspace)/drop/hotelapp.zip'
+      displayName: 'Deploy to Azure App Service'

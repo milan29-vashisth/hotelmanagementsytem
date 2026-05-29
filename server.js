@@ -23,7 +23,8 @@ app.get('/contact', (req, res) => {
     res.render('contact');
 });
 
-const PORT = 3000;
+// IMPORTANT CHANGE
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

@@ -9,26 +9,24 @@ variables:
   acrLoginServer: milanacr2026.azurecr.io
   imageName: hotel-app
   imageTag: $(Build.BuildId)
-  fullImageName: milanacr2026.azurecr.io/hotel-app:$(Build.BuildId)
+  fullImage: milanacr2026.azurecr.io/hotel-app:latest
 
 stages:
 
 # =========================
-# BUILD + PUSH IMAGE
+# BUILD & PUSH TO ACR
 # =========================
 - stage: Build
   displayName: Build and Push Docker Image
   jobs:
+
   - job: BuildPush
+    displayName: Build & Push
     steps:
 
-    # Install Docker (safe on hosted agent)
-    - task: DockerInstaller@0
-      displayName: Install Docker
-
-    # Login to Azure using Service Connection (IMPORTANT FIX)
+    # Login to Azure
     - task: AzureCLI@2
-      displayName: Login to Azure + ACR
+      displayName: Login to Azure & ACR
       inputs:
         azureSubscription: 'app-hotel-coonection'
         scriptType: bash
@@ -36,45 +34,43 @@ stages:
         inlineScript: |
           az acr login --name $(acrName)
 
-    # Build image
+    # Build Image
     - script: |
-        docker build -t $(fullImageName) .
+        docker build -t $(acrLoginServer)/$(imageName):latest .
       displayName: Build Docker Image
 
-    # Push image
+    # Push Image
     - script: |
-        docker push $(fullImageName)
+        docker push $(acrLoginServer)/$(imageName):latest
       displayName: Push Docker Image
 
+
 # =========================
-# DEPLOY TO VM
+# TRIGGER VM DEPLOYMENT (NO SSH)
 # =========================
 - stage: Deploy
+  displayName: Deploy on VM (No SSH)
   dependsOn: Build
-  jobs:
-  - job: DeployVM
-    pool:
-      vmImage: ubuntu-latest
 
+  jobs:
+  - job: TriggerDeploy
+    displayName: Trigger systemd deployment
     steps:
 
-    - task: SSH@0
-      displayName: Deploy on VM
+    - task: AzureCLI@2
+      displayName: Restart deployment on VM via Azure
       inputs:
-        sshEndpoint: 'vm-ssh-connection'
-        runOptions: inline
-        inline: |
-          echo "Stopping old container..."
-          docker stop hotel-app || true
-          docker rm hotel-app || true
+        azureSubscription: 'app-hotel-coonection'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          echo "Triggering VM deployment..."
 
-          echo "Pulling new image..."
-          docker pull milanacr2026.azurecr.io/hotel-app:$(Build.BuildId)
-
-          echo "Running new container..."
-          docker run -d \
-            --name hotel-app \
-            -p 80:3000 \
-            milanacr2026.azurecr.io/hotel-app:$(Build.BuildId)
-
-          echo "Deployment successful"
+          # Run deployment locally on VM using VM Run Command (NO SSH)
+          az vm run-command invoke \
+            --resource-group app-test-dev-rg \
+            --name hotel-dev-vm \
+            --command-id RunShellScript \
+            --scripts "
+              systemctl restart hotel-app.service
+            "

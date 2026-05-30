@@ -2,65 +2,75 @@ trigger:
 - main
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: ubuntu-latest
 
 variables:
-  azureServiceConnection: 'app-hotel-coonection'
-  appName: 'milanhotelapp12345'
+  acrName: milanacr2026
+  acrLoginServer: milanacr2026.azurecr.io
+  imageName: hotel-app
+  imageTag: $(Build.BuildId)
+  fullImage: milanacr2026.azurecr.io/hotel-app:latest
 
 stages:
 
 # =========================
-# BUILD STAGE
+# BUILD & PUSH TO ACR
 # =========================
 - stage: Build
+  displayName: Build and Push Docker Image
   jobs:
 
-  - job: BuildJob
+  - job: BuildPush
+    displayName: Build & Push
     steps:
 
-    - task: UseNode@1
+    # Login to Azure
+    - task: AzureCLI@2
+      displayName: Login to Azure & ACR
       inputs:
-        version: '20.x'
-      displayName: 'Install Node.js'
+        azureSubscription: 'app-hotel-coonection'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az acr login --name $(acrName)
 
+    # Build Image
     - script: |
-        npm install
-      displayName: 'Install Dependencies'
+        docker build -t $(acrLoginServer)/$(imageName):latest .
+      displayName: Build Docker Image
 
-    - task: ArchiveFiles@2
-      inputs:
-        rootFolderOrFile: '$(Build.SourcesDirectory)'
-        includeRootFolder: false
-        archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/hotelapp.zip'
-        replaceExistingArchive: true
-      displayName: 'Archive Application'
+    # Push Image
+    - script: |
+        docker push $(acrLoginServer)/$(imageName):latest
+      displayName: Push Docker Image
 
-    - task: PublishBuildArtifacts@1
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: 'drop'
-      displayName: 'Publish Artifact'
 
 # =========================
-# DEPLOY STAGE
+# TRIGGER VM DEPLOYMENT (NO SSH)
 # =========================
 - stage: Deploy
+  displayName: Deploy on VM (No SSH)
   dependsOn: Build
 
   jobs:
-
-  - job: DeployWebApp
+  - job: TriggerDeploy
+    displayName: Trigger systemd deployment
     steps:
 
-    - download: current
-      artifact: drop
-
-    - task: AzureWebApp@1
+    - task: AzureCLI@2
+      displayName: Restart deployment on VM via Azure
       inputs:
         azureSubscription: 'app-hotel-coonection'
-        appType: 'webAppLinux'
-        appName: 'milanhotelapp12345'
-        package: '$(Pipeline.Workspace)/drop/hotelapp.zip'
-      displayName: 'Deploy to Azure App Service'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          echo "Triggering VM deployment..."
+
+          # Run deployment locally on VM using VM Run Command (NO SSH)
+          az vm run-command invoke \
+            --resource-group app-test-dev-rg \
+            --name hotel-dev-vm \
+            --command-id RunShellScript \
+            --scripts "
+              systemctl restart hotel-app.service
+            "

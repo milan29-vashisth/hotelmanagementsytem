@@ -6,70 +6,69 @@ pool:
 
 variables:
   imageRepository: hotel-app
-  acrName: milanacr2026
+  acrName: milanacr2026.azurecr.io
   imageTag: $(Build.BuildId)
-  fullImageName: milanacr2026.azurecr.io/hotel-app:$(Build.BuildId)
+  fullImageName: $(acrName)/$(imageRepository):$(imageTag)
 
 stages:
 
 # =========================
-# BUILD & DOCKER IMAGE
+# BUILD & PUSH IMAGE
 # =========================
 - stage: Build
-  displayName: Build Docker Image
+  displayName: Build and Push Docker Image
   jobs:
 
-  - job: BuildJob
+  - job: BuildPush
     steps:
 
-    - task: UseNode@1
+    - task: Docker@2
+      displayName: Build image
       inputs:
-        version: '20.x'
-      displayName: 'Install Node.js'
+        command: build
+        repository: $(imageRepository)
+        dockerfile: '**/Dockerfile'
+        containerRegistry: 'milan-acr-connection'
+        tags: |
+          $(imageTag)
 
-    - script: |
-        npm install
-      displayName: 'Install Dependencies'
-
-    # =========================
-    # LOGIN TO ACR
-    # =========================
-    - task: AzureCLI@2
+    - task: Docker@2
+      displayName: Push image
       inputs:
-        azureSubscription: 'app-hotel-coonection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          az acr login --name $(acrName)
-      displayName: 'Login to ACR'
-
-    # =========================
-    # BUILD DOCKER IMAGE
-    # =========================
-    - script: |
-        docker build -t $(fullImageName) .
-      displayName: 'Build Docker Image'
-
-    # =========================
-    # PUSH TO ACR
-    # =========================
-    - script: |
-        docker push $(fullImageName)
-      displayName: 'Push Image to ACR'
+        command: push
+        repository: $(imageRepository)
+        containerRegistry: 'milan-acr-connection'
+        tags: |
+          $(imageTag)
 
 # =========================
-# DEPLOY STAGE (READY FOR VM)
+# DEPLOY TO VM
 # =========================
-- stage: DeployInfo
-  displayName: Show Deployment Info
+- stage: Deploy
   dependsOn: Build
   jobs:
 
-  - job: Output
+  - job: DeployVM
+    pool:
+      vmImage: ubuntu-latest
+
     steps:
 
-    - script: |
-        echo "IMAGE PUSHED SUCCESSFULLY"
-        echo "Use this image on VM:"
-        echo "milanacr2026.azurecr.io/hotel-app:$(Build.BuildId)"
-      displayName: 'Deployment Info'
+    - task: SSH@0
+      inputs:
+        sshEndpoint: 'vm-ssh-connection'
+        runOptions: inline
+        inline: |
+          echo "Pulling latest image..."
+
+          docker stop hotel-app || true
+          docker rm hotel-app || true
+
+          docker pull milanacr2026.azurecr.io/hotel-app:$(Build.BuildId)
+
+          docker run -d \
+            --name hotel-app \
+            -p 80:3000 \
+            milanacr2026.azurecr.io/hotel-app:$(Build.BuildId)
+
+          echo "Deployment successful"

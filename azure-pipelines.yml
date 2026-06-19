@@ -9,7 +9,6 @@ variables:
   acrLoginServer: milanacr2026.azurecr.io
   imageName: hotel-app
   imageTag: $(Build.BuildId)
-  fullImage: milanacr2026.azurecr.io/hotel-app:latest
 
 stages:
 
@@ -18,13 +17,15 @@ stages:
 # =========================
 - stage: Build
   displayName: Build and Push Docker Image
+
   jobs:
 
   - job: BuildPush
     displayName: Build & Push
+
     steps:
 
-    # Login to Azure
+    # Login to Azure & ACR
     - task: AzureCLI@2
       displayName: Login to Azure & ACR
       inputs:
@@ -36,41 +37,53 @@ stages:
 
     # Build Image
     - script: |
-        docker build -t $(acrLoginServer)/$(imageName):latest .
+        docker build -t $(acrLoginServer)/$(imageName):$(imageTag) .
       displayName: Build Docker Image
 
     # Push Image
     - script: |
-        docker push $(acrLoginServer)/$(imageName):latest
+        docker push $(acrLoginServer)/$(imageName):$(imageTag)
       displayName: Push Docker Image
 
 
 # =========================
-# TRIGGER VM DEPLOYMENT (NO SSH)
+# DEPLOY TO AKS
 # =========================
 - stage: Deploy
-  displayName: Deploy on VM (No SSH)
+  displayName: Deploy to AKS
   dependsOn: Build
 
   jobs:
-  - job: TriggerDeploy
-    displayName: Trigger systemd deployment
+
+  - job: DeployAKS
+    displayName: Deploy Latest Image To AKS
+
     steps:
 
     - task: AzureCLI@2
-      displayName: Restart deployment on VM via Azure
+      displayName: Connect to AKS and Deploy
       inputs:
         azureSubscription: 'app-hotel-coonection'
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          echo "Triggering VM deployment..."
 
-          # Run deployment locally on VM using VM Run Command (NO SSH)
-          az vm run-command invoke \
+          echo "Connecting to AKS..."
+
+          az aks get-credentials \
             --resource-group app-test-dev-rg \
-            --name hotel-dev-vm \
-            --command-id RunShellScript \
-            --scripts "
-              systemctl restart hotel-app.service
-            "
+            --name hotel-aks \
+            --overwrite-existing
+
+          echo "Updating deployment image..."
+
+          kubectl set image deployment/hotel-app \
+            hotel-app=$(acrLoginServer)/$(imageName):$(imageTag)
+
+          echo "Waiting for rollout..."
+
+          kubectl rollout status deployment/hotel-app --timeout=300s
+
+          echo "Deployment completed successfully"
+
+          kubectl get pods -o wide

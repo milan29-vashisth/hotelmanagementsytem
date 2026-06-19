@@ -1,107 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Book Your Stay - Milan Hotel</title>
+<title>Book Room</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <style>
-        body{
-            background:#f5f7fa;
-        }
-
-        .booking-section{
-            min-height:100vh;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            padding:40px;
-        }
-
-        .booking-card{
-            width:100%;
-            max-width:700px;
-            background:white;
-            padding:40px;
-            border-radius:15px;
-            box-shadow:0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .hotel-title{
-            text-align:center;
-            margin-bottom:30px;
-            color:#c59d5f;
-            font-weight:bold;
-        }
-
-        .btn-book{
-            background:#c59d5f;
-            color:white;
-            width:100%;
-        }
-
-        .btn-book:hover{
-            background:#b58a47;
-            color:white;
-        }
-    </style>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
-<body>
+<body class="bg-light">
 
-<div class="booking-section">
+<div class="container py-5">
 
-    <div class="booking-card">
+<div class="row justify-content-center">
 
-        <h1 class="hotel-title">Book Your Stay</h1>
+<div class="col-md-8">
 
-        <form>
+<div class="card shadow-lg">
 
-            <div class="mb-3">
-                <label class="form-label">Full Name</label>
-                <input type="text" class="form-control" placeholder="Enter your name">
-            </div>
+<div class="card-header bg-primary text-white">
+<h3>Hotel Booking Form</h3>
+</div>
 
-            <div class="mb-3">
-                <label class="form-label">Email Address</label>
-                <input type="email" class="form-control" placeholder="Enter email">
-            </div>
+<div class="card-body">
 
-            <div class="row">
+<form action="/booking" method="POST">
 
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Check-In</label>
-                    <input type="date" class="form-control">
-                </div>
+<div class="mb-3">
+<label>Name</label>
+<input type="text" class="form-control" name="name" required>
+</div>
 
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Check-Out</label>
-                    <input type="date" class="form-control">
-                </div>
+<div class="mb-3">
+<label>Email</label>
+<input type="email" class="form-control" name="email" required>
+</div>
 
-            </div>
+<div class="mb-3">
+<label>Room Type</label>
 
-            <div class="mb-3">
-                <label class="form-label">Room Type</label>
-                <select class="form-select">
-                    <option>Deluxe Room</option>
-                    <option>Premium Room</option>
-                    <option>Executive Suite</option>
-                </select>
-            </div>
+<select class="form-select" name="room">
+<option>Deluxe Room</option>
+<option>Premium Suite</option>
+<option>Family Room</option>
+</select>
+</div>
 
-            <div class="mb-3">
-                <label class="form-label">Guests</label>
-                <input type="number" class="form-control" value="1">
-            </div>
+<div class="row">
 
-            <button type="submit" class="btn btn-book btn-lg">
-                Confirm Booking
-            </button>
+<div class="col-md-6">
+<label>Check-In</label>
+<input type="date" class="form-control">
+</div>
 
-        </form>
+<div class="col-md-6">
+<label>Check-Out</label>
+<input type="date" class="form-control">
+</div>
 
-    </div>
+</div>
+
+<button class="btn btn-success mt-4 w-100">
+Confirm Booking
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
 
 </div>
 

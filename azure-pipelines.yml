@@ -72,7 +72,7 @@ stages:
 
           az aks get-credentials \
             --resource-group app-test-dev-rg \
-            --name hotel-aks \
+            --name hotel-aks-dev\
             --overwrite-existing
 
           echo "Updating deployment image..."

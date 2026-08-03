@@ -83,7 +83,7 @@ stages:
 
           echo "Waiting for rollout..."
 
-          kubectl rollout status deployment/hotel-app -n default --timeout=300secho "Current Image:"
+          kubectl rollout status deployment/hotel-app -n hotel-app-mila --timeout=300secho "Current Image:"
           kubectl describe deployment hotel-app | grep Image
 
 

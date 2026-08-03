@@ -79,7 +79,7 @@ stages:
 
           kubectl set image deployment/hotel-app \
             hotel-app=$(acrLoginServer)/$(imageName):$(imageTag)\
-            -n default
+            -n hotel-app-milan
 
           echo "Waiting for rollout..."
 

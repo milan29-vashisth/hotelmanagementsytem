@@ -78,11 +78,14 @@ stages:
           echo "Updating deployment image..."
 
           kubectl set image deployment/hotel-app \
-            hotel-app=$(acrLoginServer)/$(imageName):$(imageTag)
+            hotel-app=$(acrLoginServer)/$(imageName):$(imageTag)\
+            -n default
 
           echo "Waiting for rollout..."
 
-          kubectl rollout status deployment/hotel-app --timeout=300s
+          kubectl rollout status deployment/hotel-app -n default --timeout=300secho "Current Image:"
+          kubectl describe deployment hotel-app | grep Image
+
 
           echo "Deployment completed successfully"
 

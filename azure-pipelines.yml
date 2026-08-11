@@ -30,6 +30,9 @@ stages:
         cliProjectKey: 'hotel-app'
         cliProjectName: 'hotel-app'
         cliSources: '.'
+        extraProperties: |
+          sonar.projectKey=hotel-app
+          sonar.projectName=hotel-app
        
     - task: SonarQubeAnalyze@8
       displayName: Run SonarQube Analysis

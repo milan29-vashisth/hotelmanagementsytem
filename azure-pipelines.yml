@@ -30,6 +30,8 @@ stages:
         cliProjectKey: 'hotel-app'
         cliProjectName: 'hotel-app'
         cliSources: '.'
+        extraProperties: |
+           sonar.scanner.skipJreProvisioning=true
 
     - bash: |
         echo "========== SONARQUBE BRANCH CONFIGURATION =========="

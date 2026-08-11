@@ -39,7 +39,10 @@ stages:
         cliProjectName: 'hotel-app'
         cliSources: '.'
         extraProperties: |
-          sonar.branch.name=
+          sonar.projectKey=hotel-app
+          sonar.projectName=hotel-app
+          sonar.sources=.
+          sonar.branch.name=main
 
     # =====================================================
     # SonarQube Analyze

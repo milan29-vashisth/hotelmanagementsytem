@@ -27,20 +27,17 @@ stages:
         # SonarQube Prepare
     - task: SonarQubePrepare@7
       inputs:
-        SonarQube: 'Sonar-Qube-SVC'
-        scannerMode: 'CLI'
-        configMode: 'manual'
-        cliProjectKey: 'hotel-app'
-        cliProjectName: 'hotel-app'
-        cliSources: '.'
+       SonarQube: 'Sonar-Qube-Token-SVC'
+       scannerMode: 'cli'
+       configMode: 'manual'
+       cliProjectKey: 'hotel-app'
+       cliProjectName: 'hotel-app'
 
-    # SonarQube Analysis
     - task: SonarQubeAnalyze@7
 
-    # Publish Quality Gate
     - task: SonarQubePublish@7
       inputs:
-        pollingTimeoutSec: '300'
+       pollingTimeoutSec: '300'
 
     # Login to Azure & ACR
     - task: AzureCLI@2

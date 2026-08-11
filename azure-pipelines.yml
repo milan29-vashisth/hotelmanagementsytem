@@ -12,22 +12,14 @@ variables:
 
 stages:
 
-# =========================================================
-# BUILD + SONARQUBE + PUSH TO ACR
-# =========================================================
-
 - stage: Build
-  displayName: Build, SonarQube & Push Docker Image
+  displayName: Build, SonarQube and Push Docker Image
 
   jobs:
   - job: BuildPush
-    displayName: Build & Push
+    displayName: Build and Push
 
     steps:
-
-    # =====================================================
-    # SonarQube Prepare
-    # =====================================================
 
     - task: SonarQubePrepare@7
       displayName: Prepare SonarQube Analysis
@@ -38,34 +30,25 @@ stages:
         cliProjectKey: 'hotel-app'
         cliProjectName: 'hotel-app'
         cliSources: '.'
-        extraProperties: |
-          sonar.projectKey=hotel-app
-          sonar.projectName=hotel-app
-          sonar.sources=.
-          sonar.branch.name=main
 
-    # =====================================================
-    # SonarQube Analyze
-    # =====================================================
+    - bash: |
+        echo "========== SONARQUBE BRANCH CONFIGURATION =========="
+        find "$(Agent.TempDirectory)" -type f -iname "*sonar*" -print0 2>/dev/null | while IFS= read -r -d '' file
+        do
+          grep -H "sonar.branch.name" "$file" 2>/dev/null || true
+        done
+      displayName: Debug SonarQube Branch Configuration
 
     - task: SonarQubeAnalyze@7
       displayName: Run SonarQube Analysis
-
-    # =====================================================
-    # SonarQube Publish
-    # =====================================================
 
     - task: SonarQubePublish@7
       displayName: Publish SonarQube Results
       inputs:
         pollingTimeoutSec: '300'
 
-    # =====================================================
-    # Login to Azure + ACR
-    # =====================================================
-
     - task: AzureCLI@2
-      displayName: Login to Azure & ACR
+      displayName: Login to Azure and ACR
       inputs:
         azureSubscription: 'app-hotel-coonection'
         scriptType: bash
@@ -85,10 +68,6 @@ stages:
 
           echo "ACR login successful."
 
-    # =====================================================
-    # Build Docker Image
-    # =====================================================
-
     - script: |
         echo "======================================"
         echo "Building Docker Image..."
@@ -104,10 +83,6 @@ stages:
 
         docker images | grep hotel-app
       displayName: Build Docker Image
-
-    # =====================================================
-    # Push Docker Image
-    # =====================================================
 
     - script: |
         echo "======================================"
@@ -125,10 +100,6 @@ stages:
       displayName: Push Docker Image
 
 
-# =========================================================
-# DEPLOY TO AKS
-# =========================================================
-
 - stage: Deploy
   displayName: Deploy to AKS
   dependsOn: Build
@@ -139,10 +110,6 @@ stages:
     displayName: Deploy Image to AKS
 
     steps:
-
-    # =====================================================
-    # Connect to AKS and Deploy
-    # =====================================================
 
     - task: AzureCLI@2
       displayName: Connect to AKS and Deploy
@@ -193,11 +160,11 @@ stages:
             -n hotel-app-dev | grep -i "Image:"
 
           echo "======================================"
-          echo "Deployment Completed Successfully"
-          echo "======================================"
-
-          echo "======================================"
-          echo "Current Pods"
+          echo "Final Pod Status"
           echo "======================================"
 
           kubectl get pods -n hotel-app-dev -o wide
+
+          echo "======================================"
+          echo "Deployment Completed Successfully"
+          echo "======================================"

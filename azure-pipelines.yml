@@ -34,17 +34,13 @@ stages:
         echo "===== BUILD INFO ====="
         echo "Build.SourceBranch=$(Build.SourceBranch)"
         echo "Build.SourceBranchName=$(Build.SourceBranchName)"
-        echo "Build.Reason=$(Build.Reason)"
 
-        echo ""
         echo "===== SEARCH sonar.branch.name ====="
-
         grep -Rni "sonar.branch.name" $(Agent.TempDirectory) 2>/dev/null || true
 
-        echo ""
         echo "===== SEARCH sonar.pullrequest ====="
-
         grep -Rni "sonar.pullrequest" $(Agent.TempDirectory) 2>/dev/null || true
+
        
     - task: SonarQubeAnalyze@8
       displayName: Run SonarQube Analysis

@@ -12,34 +12,55 @@ variables:
 
 stages:
 
-# =========================
-# BUILD & PUSH TO ACR
-# =========================
+# =========================================================
+# BUILD + SONARQUBE + PUSH TO ACR
+# =========================================================
+
 - stage: Build
-  displayName: Build and Push Docker Image
+  displayName: Build, SonarQube & Push Docker Image
 
   jobs:
-
   - job: BuildPush
     displayName: Build & Push
 
     steps:
-        # SonarQube Prepare
+
+    # =====================================================
+    # SonarQube Prepare
+    # =====================================================
+
     - task: SonarQubePrepare@7
+      displayName: Prepare SonarQube Analysis
       inputs:
-       SonarQube: 'Sonar-Qube-Token-SVC'
-       scannerMode: 'cli'
-       configMode: 'manual'
-       cliProjectKey: 'hotel-app'
-       cliProjectName: 'hotel-app'
+        SonarQube: 'Sonar-Qube-Token-SVC'
+        scannerMode: 'cli'
+        configMode: 'manual'
+        cliProjectKey: 'hotel-app'
+        cliProjectName: 'hotel-app'
+        cliSources: '.'
+        extraProperties: |
+          sonar.branch.name=
+
+    # =====================================================
+    # SonarQube Analyze
+    # =====================================================
 
     - task: SonarQubeAnalyze@7
+      displayName: Run SonarQube Analysis
+
+    # =====================================================
+    # SonarQube Publish
+    # =====================================================
 
     - task: SonarQubePublish@7
+      displayName: Publish SonarQube Results
       inputs:
-       pollingTimeoutSec: '300'
+        pollingTimeoutSec: '300'
 
-    # Login to Azure & ACR
+    # =====================================================
+    # Login to Azure + ACR
+    # =====================================================
+
     - task: AzureCLI@2
       displayName: Login to Azure & ACR
       inputs:
@@ -47,42 +68,78 @@ stages:
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
+          echo "======================================"
+          echo "Logging into Azure..."
+          echo "======================================"
+
+          az account show
+
+          echo "======================================"
+          echo "Logging into ACR..."
+          echo "======================================"
+
           az acr login --name $(acrName)
 
-    # Login to Azure & ACR
-    - task: AzureCLI@2
-      displayName: Login to Azure & ACR
-      inputs:
-        azureSubscription: 'app-hotel-coonection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          az acr login --name $(acrName)
+          echo "ACR login successful."
 
-    # Build Image
+    # =====================================================
+    # Build Docker Image
+    # =====================================================
+
     - script: |
-        docker build -t $(acrLoginServer)/$(imageName):$(imageTag) .
+        echo "======================================"
+        echo "Building Docker Image..."
+        echo "======================================"
+
+        docker build \
+          -t $(acrLoginServer)/$(imageName):$(imageTag) \
+          .
+
+        echo "======================================"
+        echo "Docker Image Built Successfully"
+        echo "======================================"
+
+        docker images | grep hotel-app
       displayName: Build Docker Image
 
-    # Push Image
+    # =====================================================
+    # Push Docker Image
+    # =====================================================
+
     - script: |
+        echo "======================================"
+        echo "Pushing Docker Image to ACR..."
+        echo "======================================"
+
         docker push $(acrLoginServer)/$(imageName):$(imageTag)
+
+        echo "======================================"
+        echo "Docker Image Pushed Successfully"
+        echo "======================================"
+
+        echo "Image:"
+        echo "$(acrLoginServer)/$(imageName):$(imageTag)"
       displayName: Push Docker Image
 
 
-# =========================
+# =========================================================
 # DEPLOY TO AKS
-# =========================
+# =========================================================
+
 - stage: Deploy
   displayName: Deploy to AKS
   dependsOn: Build
+  condition: succeeded()
 
   jobs:
-
   - job: DeployAKS
-    displayName: Deploy Latest Image To AKS
+    displayName: Deploy Image to AKS
 
     steps:
+
+    # =====================================================
+    # Connect to AKS and Deploy
+    # =====================================================
 
     - task: AzureCLI@2
       displayName: Connect to AKS and Deploy
@@ -92,25 +149,52 @@ stages:
         scriptLocation: inlineScript
         inlineScript: |
 
+          echo "======================================"
           echo "Connecting to AKS..."
+          echo "======================================"
 
           az aks get-credentials \
             --resource-group app-test-dev-rg \
-            --name hotel-aks-dev\
+            --name hotel-aks-dev \
             --overwrite-existing
 
-          echo "Updating deployment image..."
+          echo "AKS connection successful."
+
+          echo "======================================"
+          echo "Current Pods"
+          echo "======================================"
+
+          kubectl get pods -n hotel-app-dev
+
+          echo "======================================"
+          echo "Updating Deployment Image..."
+          echo "======================================"
 
           kubectl set image deployment/hotel-app \
-            hotel-app=$(acrLoginServer)/$(imageName):$(imageTag)\
-            -n hotel-app-milan
+            hotel-app=$(acrLoginServer)/$(imageName):$(imageTag) \
+            -n hotel-app-dev
 
-          echo "Waiting for rollout..."
+          echo "======================================"
+          echo "Waiting for Rollout..."
+          echo "======================================"
 
-          kubectl rollout status deployment/hotel-app -n hotel-app-mila --timeout=300secho "Current Image:"
-          kubectl describe deployment hotel-app | grep Image
+          kubectl rollout status deployment/hotel-app \
+            -n hotel-app-dev \
+            --timeout=300s
 
+          echo "======================================"
+          echo "Current Deployment Image"
+          echo "======================================"
 
-          echo "Deployment completed successfully"
+          kubectl describe deployment hotel-app \
+            -n hotel-app-dev | grep -i "Image:"
 
-          kubectl get pods -o wide
+          echo "======================================"
+          echo "Deployment Completed Successfully"
+          echo "======================================"
+
+          echo "======================================"
+          echo "Current Pods"
+          echo "======================================"
+
+          kubectl get pods -n hotel-app-dev -o wide

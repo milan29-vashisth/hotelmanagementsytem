@@ -30,6 +30,10 @@ stages:
         cliProjectKey: 'hotel-app'
         cliProjectName: 'hotel-app'
         cliSources: '.'
+        extraProperties: |
+          sonar.branch.name=
+
+
     - bash: |
         echo "===== BUILD INFO ====="
         echo "Build.SourceBranch=$(Build.SourceBranch)"

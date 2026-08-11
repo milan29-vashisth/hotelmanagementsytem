@@ -21,7 +21,7 @@ stages:
 
     steps:
 
-    - task: SonarQubePrepare@7
+    - task: SonarQubePrepare@8
       displayName: Prepare SonarQube Analysis
       inputs:
         SonarQube: 'Sonar-Qube-Token-SVC'
@@ -30,21 +30,11 @@ stages:
         cliProjectKey: 'hotel-app'
         cliProjectName: 'hotel-app'
         cliSources: '.'
-        extraProperties: |
-           sonar.scanner.skipJreProvisioning=true
-
-    - bash: |
-        echo "========== SONARQUBE BRANCH CONFIGURATION =========="
-        find "$(Agent.TempDirectory)" -type f -iname "*sonar*" -print0 2>/dev/null | while IFS= read -r -d '' file
-        do
-          grep -H "sonar.branch.name" "$file" 2>/dev/null || true
-        done
-      displayName: Debug SonarQube Branch Configuration
-
-    - task: SonarQubeAnalyze@7
+       
+    - task: SonarQubeAnalyze@8
       displayName: Run SonarQube Analysis
 
-    - task: SonarQubePublish@7
+    - task: SonarQubePublish@8
       displayName: Publish SonarQube Results
       inputs:
         pollingTimeoutSec: '300'

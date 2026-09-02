@@ -28,6 +28,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/rooms', (req, res) => {
+    
     res.render('rooms');
 });
 
